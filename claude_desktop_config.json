@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "coolify": {
+      "command": "node",
+      "args": ["/Users/$(whoami)/.npm-global/bin/coolify-mcp-server"],
+      "env": {
+        "COOLIFY_API_KEY": "${COOLIFY_API_KEY}",
+        "COOLIFY_API_URL": "https://your-coolify-server.com/api",
+        "COOLIFY_API_VERSION": "v1",
+        "REQUEST_TIMEOUT": "10000",
+        "LOG_LEVEL": "info",
+        "CHARACTER_LIMIT": "10000"
+      }
+    }
+  }
+}

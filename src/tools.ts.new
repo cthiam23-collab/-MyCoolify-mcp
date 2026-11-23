@@ -1,0 +1,174 @@
+/**
+ * MCP Tools for Coolify Plugin
+ * Each tool is mapped to a Coolify API operation
+ */
+import { z } from 'zod';
+import { CoolifyClient } from './coolifyClient.js';
+
+// Tool schemas for validation
+export const ListProjectsSchema = z.object({
+    search: z.string().optional().describe('Search term to filter projects'),
+    page: z.number().int().min(1).optional().describe('Page number for pagination'),
+    limit: z.number().int().min(1).max(100).optional().describe('Number of results per page'),
+});
+export const GetProjectSchema = z.object({
+    projectId: z.string().describe('The ID of the project to retrieve'),
+});
+export const CreateProjectSchema = z.object({
+    name: z.string().min(1).describe('Name of the project'),
+    description: z.string().optional().describe('Project description'),
+    environment: z.string().optional().describe('Environment name (e.g., production, staging)'),
+    gitRepository: z.string().url().optional().describe('Git repository URL'),
+    buildCommand: z.string().optional().describe('Custom build command'),
+    startCommand: z.string().optional().describe('Custom start command'),
+});
+export const DeployProjectSchema = z.object({
+    projectId: z.string().describe('The ID of the project to deploy'),
+    branch: z.string().optional().describe('Git branch to deploy'),
+    tag: z.string().optional().describe('Git tag to deploy'),
+    message: z.string().optional().describe('Deployment message'),
+});
+export const ListDatabasesSchema = z.object({
+    type: z.enum(['postgresql', 'mysql', 'mariadb', 'redis', 'mongodb', 'mongo', 'cassandra', 'elasticsearch', 'memcached']).optional().describe('Filter by database type'),
+    search: z.string().optional().describe('Search term to filter databases'),
+    page: z.number().int().min(1).optional().describe('Page number for pagination'),
+    limit: z.number().int().min(1).max(100).optional().describe('Number of results per page'),
+});
+export const GetDatabaseSchema = z.object({
+    databaseId: z.string().describe('The ID of the database to retrieve'),
+});
+export const DeleteDatabaseSchema = z.object({
+    databaseId: z.string().describe('The ID of the database to delete'),
+});
+export const ListServicesSchema = z.object({
+    search: z.string().optional().describe('Search term to filter services'),
+    page: z.number().int().min(1).optional().describe('Page number for pagination'),
+    limit: z.number().int().min(1).max(100).optional().describe('Number of results per page'),
+});
+export const GetServiceSchema = z.object({
+    serviceId: z.string().describe('The ID of the service to retrieve'),
+});
+export const GetServerInfoSchema = z.object({
+    includeMetrics: z.boolean().optional().default(false).describe('Include server metrics'),
+});
+export const GetProjectLogsSchema = z.object({
+    projectId: z.string().describe('The ID of the project'),
+    tail: z.boolean().optional(),
+    lines: z.number().int().min(1).max(10000).default(100).describe('Number of log lines to return'),
+});
+export const HealthCheckSchema = z.object({
+    timeout: z.number().int().min(1000).max(10000).default(30000).describe('Timeout in milliseconds'),
+});
+
+// Format functions for displaying results
+function formatProject(project: { id: string; name: string; status?: string; createdAt?: string; description?: string; subdomain?: string; domain?: string; environment?: string; cpuUsage?: number; memoryUsage?: number; diskUsage?: number; }): string {
+  const lines = [
+    `# ${project.name}`,
+    `ID: ${project.id}`,
+    `Status: ${project.status || 'unknown'}`,
+  ];
+  
+  if (project.description) lines.push(`Description: ${project.description}`);
+  if (project.environment) lines.push(`Environment: ${project.environment}`);
+  if (project.subdomain || project.domain) {
+    lines.push(`URL: ${project.subdomain ? `https://${project.subdomain}.coolify.app` : project.domain}`);
+  }
+  if (project.cpuUsage !== undefined || project.memoryUsage !== undefined || project.diskUsage !== undefined) {
+    lines.push(`\n## Metrics`);
+    if (project.cpuUsage !== undefined) lines.push(`CPU: ${project.cpuUsage}%`);
+    if (project.memoryUsage !== undefined) lines.push(`Memory: ${project.memoryUsage}%`);
+    if (project.diskUsage !== undefined) lines.push(`Disk: ${project.diskUsage}%`);
+  }
+  
+  return lines.join('\n');
+}
+
+function formatDatabase(db: { id: string; name: string; type: string; host?: string; port?: number; status?: string; createdAt?: string; username?: string; }): string {
+  const lines = [
+    `# ${db.name}`,
+    `ID: ${db.id}`,
+    `Type: ${db.type}`,
+    `Status: ${db.status || 'unknown'}`,
+  ];
+  
+  if (db.host && db.port) {
+    lines.push(`Host: ${db.host}:${db.port}`);
+  }
+  if (db.username) {
+    lines.push(`Username: ${db.username}`);
+  }
+  if (db.createdAt) {
+    lines.push(`Created: ${db.createdAt}`);
+  }
+  
+  return lines.join('\n');
+}
+
+function formatService(service: { id: string; name: string; image: string; status?: string; createdAt?: string; command?: string; ports?: string[] }): string {
+  const lines = [
+    `# ${service.name}`,
+    `ID: ${service.id}`,
+    `Image: ${service.image}`,
+    `Status: ${service.status || 'unknown'}`,
+  ];
+  
+  if (service.command) lines.push(`Command: ${service.command}`);
+  if (service.ports && service.ports.length > 0) {
+    lines.push(`Ports: ${service.ports.join(', ')}`);
+  }
+  
+  return lines.join('\n');
+}
+
+// Tool exports - main functions
+export async function listProjects(client: CoolifyClient, args: z.infer<typeof ListProjectsSchema>): Promise<string> {
+  const projects = await client.listProjects(args);
+
+  if (projects.length === 0) {
+    return 'No projects found.';
+  }
+
+  return projects.map(formatProject).join('\n\n---\n\n');
+}
+
+export async function getProject(client: CoolifyClient, args: z.infer<typeof GetProjectSchema>): Promise<string> {
+  const project = await client.getProject(args.projectId);
+  return formatProject(project);
+}
+
+export async function createProject(client: CoolifyClient, args: z.infer<typeof CreateProjectSchema>): Promise<string> {
+  const project = await client.createProject(args);
+  return `Project created successfully:\n\n${formatProject(project)}`;
+}
+
+export async function deployProject(client: CoolifyClient, args: z.infer<typeof DeployProjectSchema>): Promise<string> {
+  await client.deployProject(args.projectId, {
+    branch: args.branch,
+    tag: args.tag,
+    message: args.message,
+  });
+
+  return `Deployment initiated for project ${args.projectId}${
+    args.branch ? ` (branch: ${args.branch})` : ''
+  }${args.tag ? ` (tag: ${args.tag})` : ''}.`;
+}
+
+export { listProjects as ListProjectsTool };
+export { getProject as GetProjectTool };
+export { createProject as CreateProjectTool };
+export { deployProject as DeployProjectTool };
+export { startProject as StartProjectTool };
+export { stopProject as StopProjectTool };
+export { restartProject as RestartProjectTool };
+export { scaleProject as ScaleProjectTool };
+export { deleteProject as DeleteProjectTool };
+export { listDatabases as ListDatabasesTool };
+export { getDatabase as GetDatabaseTool };
+export { deleteDatabase as DeleteDatabaseTool };
+export { listServices as ListServicesTool };
+export { getService as GetServiceTool };
+export { startService as StartServiceTool };
+export { stopService as StopServiceTool };
+export { getServerInfo as GetServerInfoTool };
+export { getProjectLogs as GetProjectLogsTool };
+export { healthCheck as HealthCheckTool };

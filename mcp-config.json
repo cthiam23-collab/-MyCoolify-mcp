@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "coolify": {
+      "command": "coolify-mcp-server",
+      "env": {
+        "COOLIFY_API_KEY": "your_api_key_here",
+        "COOLIFY_API_URL": "http://localhost:3000",
+        "COOLIFY_API_VERSION": "v1",
+        "REQUEST_TIMEOUT": "30000",
+        "LOG_LEVEL": "info",
+        "CHARACTER_LIMIT": "10000"
+      }
+    }
+  }
+}

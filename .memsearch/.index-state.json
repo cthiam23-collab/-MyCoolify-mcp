@@ -1,0 +1,18 @@
+{
+  "collection": "ms_coolify_plugin_b4cef3c0",
+  "failed_files": [],
+  "indexed_chunks": 2,
+  "indexed_files": 1,
+  "last_completed_at": "2026-11-23T14:51:15.911600Z",
+  "last_started_at": "2026-11-23T14:51:11.816403Z",
+  "last_success_at": "2026-11-23T14:51:15.911600Z",
+  "milvus_uri": "~/.memsearch/milvus.db",
+  "operation": "index",
+  "paths": [
+    "H:\\Coolify Plugin\\.memsearch\\memory"
+  ],
+  "schema_version": 1,
+  "status": "ok",
+  "total_files": 1,
+  "updated_at": "2026-11-23T14:51:15.911600Z"
+}
